@@ -1,0 +1,25 @@
+model:
+  vocab_size: 4096
+  max_seq_len: 128
+  d_model: 128
+  n_layers: 6
+  n_heads: 4
+  d_ff: 512
+  memory_slots: 16
+  memory_dim: 128
+  relation_slots: 16
+  relation_dim: 128
+  n_regimes: 8
+  n_cards: 6
+  coherence_rank: 8
+  residual_bottleneck: 32
+train:
+  run_dir: runs/tiny_lm
+  steps: 200
+  batch_size: 8
+  lr: 0.0003
+  seq_len: 64
+  seed: 7
+  coh_warmup: 50
+  coh_ramp: 100
+  coh_target: 0.05
