@@ -1,0 +1,26 @@
+model:
+  vocab_size: 256
+  max_seq_len: 32
+  d_model: 64
+  n_layers: 2
+  n_heads: 4
+  d_ff: 128
+  memory_slots: 8
+  memory_dim: 64
+  relation_slots: 8
+  relation_dim: 64
+  n_regimes: 4
+  n_cards: 4
+  coherence_rank: 4
+  residual_bottleneck: 16
+  coh_gain: 0.0
+train:
+  run_dir: runs/debug
+  steps: 1
+  batch_size: 2
+  lr: 0.0005
+  seq_len: 16
+  seed: 0
+  coh_warmup: 1
+  coh_ramp: 2
+  coh_target: 0.02
