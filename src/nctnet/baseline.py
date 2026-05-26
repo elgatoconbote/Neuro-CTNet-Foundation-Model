@@ -117,6 +117,7 @@ def train_baseline_report(
         seq_len=seq_len,
         size=size,
         batch_size=batch_size,
+        ablations=["none"],
     )
     paths = write_eval_report(results, train_cfg.run_dir, stem="baseline_eval_family")
     return ReportPaths(checkpoint=str(checkpoint), tsv=paths.tsv, json=paths.json), results
