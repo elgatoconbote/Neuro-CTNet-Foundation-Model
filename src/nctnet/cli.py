@@ -8,6 +8,7 @@ from .ablations import SUPPORTED_ABLATIONS, logits_delta_under_ablation
 from .eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_table
 from .report import train_eval_report
 from .baseline import train_baseline_report
+from .compare import compare_reports, format_comparison_table, write_comparison
 
 
 def _load_model(checkpoint_path: str):
@@ -40,6 +41,12 @@ def main():
     baseline.add_argument("--seq-len", type=int, default=16)
     baseline.add_argument("--size", type=int, default=64)
     baseline.add_argument("--batch-size", type=int, default=4)
+
+    compare = sub.add_parser("compare-reports")
+    compare.set_defaults(command="compare_reports")
+    compare.add_argument("--nct", required=True)
+    compare.add_argument("--baseline", required=True)
+    compare.add_argument("--out-dir", default="runs/debug")
 
     inspect = sub.add_parser("inspect")
     inspect.set_defaults(command="inspect")
@@ -95,6 +102,14 @@ def main():
         print(f"checkpoint={paths.checkpoint}")
         print(f"tsv={paths.tsv}")
         print(f"json={paths.json}")
+        return
+
+    if args.command == "compare_reports":
+        rows = compare_reports(args.nct, args.baseline)
+        tsv, js = write_comparison(rows, args.out_dir)
+        print(format_comparison_table(rows))
+        print(f"tsv={tsv}")
+        print(f"json={js}")
         return
 
     model, cfg = _load_model(args.checkpoint)
