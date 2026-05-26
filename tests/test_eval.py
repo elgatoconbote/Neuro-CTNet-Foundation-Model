@@ -1,7 +1,7 @@
 import torch
 
 from nctnet import NCTConfig, NCTLanguageModel
-from nctnet.eval import evaluate_synthetic, format_eval_table
+from nctnet.eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_table
 
 
 def cfg():
@@ -34,9 +34,25 @@ def test_evaluate_synthetic_returns_full_and_ablation_rows():
         ablations=["none", "no_memory", "single_card"],
     )
     assert [r.name for r in results] == ["none", "no_memory", "single_card"]
+    assert all(r.family == "mixed" for r in results)
     assert all(r.tokens > 0 for r in results)
     assert all(r.task_loss > 0 for r in results)
     assert all(0.0 <= r.accuracy <= 1.0 for r in results)
+
+
+def test_evaluate_synthetic_families_returns_family_rows():
+    model = NCTLanguageModel(cfg())
+    results = evaluate_synthetic_families(
+        model,
+        seq_len=8,
+        size=4,
+        batch_size=2,
+        ablations=["none", "no_memory"],
+        families=["persistent_entity", "delayed_copy"],
+    )
+    assert len(results) == 4
+    assert {r.family for r in results} == {"persistent_entity", "delayed_copy"}
+    assert {r.name for r in results} == {"none", "no_memory"}
 
 
 def test_format_eval_table_contains_deltas():
@@ -49,6 +65,7 @@ def test_format_eval_table_contains_deltas():
         ablations=["none", "no_relations"],
     )
     table = format_eval_table(results)
+    assert "family" in table
     assert "ablation" in table
     assert "delta_loss" in table
     assert "no_relations" in table
