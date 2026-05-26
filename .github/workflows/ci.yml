@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Run tests
+        run: pytest -q
+
+  smoke-benchmark:
+    name: Smoke benchmark and report
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: tests
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Run benchmark smoke
+        run: |
+          python -m nctnet.cli run-benchmark \
+            --config configs/debug.yaml \
+            --seeds 0 \
+            --seq-len 16 \
+            --size 16 \
+            --batch-size 4 \
+            --out-dir runs/benchmark
+
+      - name: Generate benchmark Markdown report
+        run: |
+          python -m nctnet.cli benchmark-report \
+            --benchmark runs/benchmark/benchmark.json \
+            --out runs/benchmark/BENCHMARK_REPORT.md \
+            --min-win-rate 0.5
+
+      - name: Print benchmark report
+        run: cat runs/benchmark/BENCHMARK_REPORT.md
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: neuro-ctnet-smoke-benchmark
+          path: |
+            runs/benchmark/benchmark.tsv
+            runs/benchmark/benchmark.json
+            runs/benchmark/BENCHMARK_REPORT.md
+            runs/benchmark/**/eval_family.json
+            runs/benchmark/**/baseline_eval_family.json
