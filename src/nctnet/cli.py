@@ -9,6 +9,7 @@ from .eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_t
 from .report import train_eval_report
 from .baseline import train_baseline_report
 from .compare import compare_reports, format_comparison_table, write_comparison
+from .benchmark import run_benchmark, format_benchmark_table
 
 
 def _load_model(checkpoint_path: str):
@@ -18,6 +19,10 @@ def _load_model(checkpoint_path: str):
     model.load_state_dict(checkpoint["model"])
     model.eval()
     return model, cfg
+
+
+def _parse_seeds(raw: str) -> list[int]:
+    return [int(x.strip()) for x in raw.split(",") if x.strip()]
 
 
 def main():
@@ -47,6 +52,15 @@ def main():
     compare.add_argument("--nct", required=True)
     compare.add_argument("--baseline", required=True)
     compare.add_argument("--out-dir", default="runs/debug")
+
+    bench = sub.add_parser("run-benchmark")
+    bench.set_defaults(command="run_benchmark")
+    bench.add_argument("--config", required=True)
+    bench.add_argument("--seeds", default="0,1,2")
+    bench.add_argument("--seq-len", type=int, default=16)
+    bench.add_argument("--size", type=int, default=64)
+    bench.add_argument("--batch-size", type=int, default=4)
+    bench.add_argument("--out-dir", default="runs/benchmark")
 
     inspect = sub.add_parser("inspect")
     inspect.set_defaults(command="inspect")
@@ -108,6 +122,22 @@ def main():
         rows = compare_reports(args.nct, args.baseline)
         tsv, js = write_comparison(rows, args.out_dir)
         print(format_comparison_table(rows))
+        print(f"tsv={tsv}")
+        print(f"json={js}")
+        return
+
+    if args.command == "run_benchmark":
+        raw = _load_cfg(args.config)
+        rows, tsv, js = run_benchmark(
+            NCTConfig(**raw.get("model", {})),
+            TrainConfig(**raw.get("train", {})),
+            seeds=_parse_seeds(args.seeds),
+            seq_len=args.seq_len,
+            size=args.size,
+            batch_size=args.batch_size,
+            out_dir=args.out_dir,
+        )
+        print(format_benchmark_table(rows))
         print(f"tsv={tsv}")
         print(f"json={js}")
         return
