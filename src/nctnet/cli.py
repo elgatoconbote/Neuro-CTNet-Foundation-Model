@@ -5,7 +5,7 @@ import torch
 
 from .core import NCTConfig, NCTLanguageModel, TrainConfig, _load_cfg, train_tiny_lm
 from .ablations import SUPPORTED_ABLATIONS, logits_delta_under_ablation
-from .eval import evaluate_synthetic, format_eval_table
+from .eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_table
 
 
 def _load_model(checkpoint_path: str):
@@ -37,6 +37,7 @@ def main():
     ev.add_argument("--seq-len", type=int, default=16)
     ev.add_argument("--size", type=int, default=64)
     ev.add_argument("--batch-size", type=int, default=4)
+    ev.add_argument("--by-family", action="store_true")
 
     args = parser.parse_args()
 
@@ -58,12 +59,20 @@ def main():
         return
 
     if hasattr(args, "seq_len"):
-        results = evaluate_synthetic(
-            model,
-            seq_len=args.seq_len,
-            size=args.size,
-            batch_size=args.batch_size,
-        )
+        if args.by_family:
+            results = evaluate_synthetic_families(
+                model,
+                seq_len=args.seq_len,
+                size=args.size,
+                batch_size=args.batch_size,
+            )
+        else:
+            results = evaluate_synthetic(
+                model,
+                seq_len=args.seq_len,
+                size=args.size,
+                batch_size=args.batch_size,
+            )
         print(format_eval_table(results))
         return
 
