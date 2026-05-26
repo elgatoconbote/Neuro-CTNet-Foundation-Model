@@ -23,23 +23,28 @@ def main():
     sub = parser.add_subparsers(required=True)
 
     train = sub.add_parser("train-lm")
+    train.set_defaults(command="train_lm")
     train.add_argument("--config", required=True)
 
     report = sub.add_parser("train-eval-report")
+    report.set_defaults(command="train_eval_report")
     report.add_argument("--config", required=True)
     report.add_argument("--seq-len", type=int, default=16)
     report.add_argument("--size", type=int, default=64)
     report.add_argument("--batch-size", type=int, default=4)
 
     inspect = sub.add_parser("inspect")
+    inspect.set_defaults(command="inspect")
     inspect.add_argument("--checkpoint", required=True)
     inspect.add_argument("--prompt", default="1 2 3 4")
 
     ablate = sub.add_parser("ablate")
+    ablate.set_defaults(command="ablate")
     ablate.add_argument("--checkpoint", required=True)
     ablate.add_argument("--ablation", default="no_coherence", choices=sorted(SUPPORTED_ABLATIONS - {"none"}))
 
     ev = sub.add_parser("eval-synthetic")
+    ev.set_defaults(command="eval_synthetic")
     ev.add_argument("--checkpoint", required=True)
     ev.add_argument("--seq-len", type=int, default=16)
     ev.add_argument("--size", type=int, default=64)
@@ -48,13 +53,13 @@ def main():
 
     args = parser.parse_args()
 
-    if hasattr(args, "config") and not hasattr(args, "seq_len"):
+    if args.command == "train_lm":
         raw = _load_cfg(args.config)
         checkpoint = train_tiny_lm(NCTConfig(**raw.get("model", {})), TrainConfig(**raw.get("train", {})))
         print(f"saved={checkpoint}")
         return
 
-    if hasattr(args, "config") and hasattr(args, "seq_len"):
+    if args.command == "train_eval_report":
         raw = _load_cfg(args.config)
         paths, results = train_eval_report(
             NCTConfig(**raw.get("model", {})),
@@ -71,7 +76,7 @@ def main():
 
     model, cfg = _load_model(args.checkpoint)
 
-    if hasattr(args, "prompt"):
+    if args.command == "inspect":
         toks = [int(x) % cfg.vocab_size for x in args.prompt.split() if x.lstrip("-").isdigit()] or [1, 2, 3, 4]
         out = model(torch.tensor(toks).unsqueeze(0))
         print("logits_shape", tuple(out.logits.shape))
@@ -80,7 +85,7 @@ def main():
             print(f"{key}: {value:.6f}")
         return
 
-    if hasattr(args, "seq_len"):
+    if args.command == "eval_synthetic":
         if args.by_family:
             results = evaluate_synthetic_families(
                 model,
@@ -98,10 +103,12 @@ def main():
         print(format_eval_table(results))
         return
 
-    ids = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]])
-    delta = logits_delta_under_ablation(model, ids, args.ablation)
-    print("ablation", args.ablation)
-    print("mean_abs_delta", delta)
+    if args.command == "ablate":
+        ids = torch.tensor([[1, 2, 3, 4, 5, 6, 7, 8]])
+        delta = logits_delta_under_ablation(model, ids, args.ablation)
+        print("ablation", args.ablation)
+        print("mean_abs_delta", delta)
+        return
 
 
 if __name__ == "__main__":
