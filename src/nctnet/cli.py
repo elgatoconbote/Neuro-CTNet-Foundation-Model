@@ -10,6 +10,7 @@ from .report import train_eval_report
 from .baseline import train_baseline_report
 from .compare import compare_reports, format_comparison_table, write_comparison
 from .benchmark import run_benchmark, format_benchmark_table
+from .benchmark_report import write_markdown_report
 
 
 def _load_model(checkpoint_path: str):
@@ -61,6 +62,12 @@ def main():
     bench.add_argument("--size", type=int, default=64)
     bench.add_argument("--batch-size", type=int, default=4)
     bench.add_argument("--out-dir", default="runs/benchmark")
+
+    bench_report = sub.add_parser("benchmark-report")
+    bench_report.set_defaults(command="benchmark_report")
+    bench_report.add_argument("--benchmark", required=True)
+    bench_report.add_argument("--out", default="runs/benchmark/BENCHMARK_REPORT.md")
+    bench_report.add_argument("--min-win-rate", type=float, default=0.5)
 
     inspect = sub.add_parser("inspect")
     inspect.set_defaults(command="inspect")
@@ -140,6 +147,15 @@ def main():
         print(format_benchmark_table(rows))
         print(f"tsv={tsv}")
         print(f"json={js}")
+        return
+
+    if args.command == "benchmark_report":
+        path = write_markdown_report(
+            args.benchmark,
+            args.out,
+            min_win_rate=args.min_win_rate,
+        )
+        print(f"markdown={path}")
         return
 
     model, cfg = _load_model(args.checkpoint)
