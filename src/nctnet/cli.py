@@ -7,6 +7,7 @@ from .core import NCTConfig, NCTLanguageModel, TrainConfig, _load_cfg, train_tin
 from .ablations import SUPPORTED_ABLATIONS, logits_delta_under_ablation
 from .eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_table
 from .report import train_eval_report
+from .baseline import train_baseline_report
 
 
 def _load_model(checkpoint_path: str):
@@ -32,6 +33,13 @@ def main():
     report.add_argument("--seq-len", type=int, default=16)
     report.add_argument("--size", type=int, default=64)
     report.add_argument("--batch-size", type=int, default=4)
+
+    baseline = sub.add_parser("train-baseline-report")
+    baseline.set_defaults(command="train_baseline_report")
+    baseline.add_argument("--config", required=True)
+    baseline.add_argument("--seq-len", type=int, default=16)
+    baseline.add_argument("--size", type=int, default=64)
+    baseline.add_argument("--batch-size", type=int, default=4)
 
     inspect = sub.add_parser("inspect")
     inspect.set_defaults(command="inspect")
@@ -62,6 +70,21 @@ def main():
     if args.command == "train_eval_report":
         raw = _load_cfg(args.config)
         paths, results = train_eval_report(
+            NCTConfig(**raw.get("model", {})),
+            TrainConfig(**raw.get("train", {})),
+            seq_len=args.seq_len,
+            size=args.size,
+            batch_size=args.batch_size,
+        )
+        print(format_eval_table(results))
+        print(f"checkpoint={paths.checkpoint}")
+        print(f"tsv={paths.tsv}")
+        print(f"json={paths.json}")
+        return
+
+    if args.command == "train_baseline_report":
+        raw = _load_cfg(args.config)
+        paths, results = train_baseline_report(
             NCTConfig(**raw.get("model", {})),
             TrainConfig(**raw.get("train", {})),
             seq_len=args.seq_len,
