@@ -6,6 +6,7 @@ import torch
 from .core import NCTConfig, NCTLanguageModel, TrainConfig, _load_cfg, train_tiny_lm
 from .ablations import SUPPORTED_ABLATIONS, logits_delta_under_ablation
 from .eval import evaluate_synthetic, evaluate_synthetic_families, format_eval_table
+from .report import train_eval_report
 
 
 def _load_model(checkpoint_path: str):
@@ -24,6 +25,12 @@ def main():
     train = sub.add_parser("train-lm")
     train.add_argument("--config", required=True)
 
+    report = sub.add_parser("train-eval-report")
+    report.add_argument("--config", required=True)
+    report.add_argument("--seq-len", type=int, default=16)
+    report.add_argument("--size", type=int, default=64)
+    report.add_argument("--batch-size", type=int, default=4)
+
     inspect = sub.add_parser("inspect")
     inspect.add_argument("--checkpoint", required=True)
     inspect.add_argument("--prompt", default="1 2 3 4")
@@ -41,10 +48,25 @@ def main():
 
     args = parser.parse_args()
 
-    if hasattr(args, "config"):
+    if hasattr(args, "config") and not hasattr(args, "seq_len"):
         raw = _load_cfg(args.config)
         checkpoint = train_tiny_lm(NCTConfig(**raw.get("model", {})), TrainConfig(**raw.get("train", {})))
         print(f"saved={checkpoint}")
+        return
+
+    if hasattr(args, "config") and hasattr(args, "seq_len"):
+        raw = _load_cfg(args.config)
+        paths, results = train_eval_report(
+            NCTConfig(**raw.get("model", {})),
+            TrainConfig(**raw.get("train", {})),
+            seq_len=args.seq_len,
+            size=args.size,
+            batch_size=args.batch_size,
+        )
+        print(format_eval_table(results))
+        print(f"checkpoint={paths.checkpoint}")
+        print(f"tsv={paths.tsv}")
+        print(f"json={paths.json}")
         return
 
     model, cfg = _load_model(args.checkpoint)
